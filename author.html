@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Pico — Код автора</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0; font-family: Arial, sans-serif; }
+    body {
+        min-height: 100vh;
+        background: #0044cc;
+        color: #fff;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+    }
+    .card { width: 100%; max-width: 460px; background: #002d85; border: 4px solid #000; padding: 22px 18px; }
+    h1 { font-size: 26px; text-transform: uppercase; margin-bottom: 14px; }
+    p, li { font-size: 15px; line-height: 1.45; }
+    ul { margin: 8px 0 16px 20px; }
+    .view { display: none; }
+    .view.on { display: block; }
+    label { display: block; font-size: 13px; font-weight: bold; margin: 14px 0 6px; }
+    input[type=text], input[type=email], input[type=password], input[type=url] {
+        width: 100%; padding: 12px; font-size: 16px; border: 3px solid #000; background: #fff; color: #000;
+    }
+    .btn {
+        display: block; width: 100%; margin-top: 14px; padding: 14px; text-align: center;
+        font-size: 17px; font-weight: bold; color: #000; background: #ffcc00;
+        border: 3px solid #000; box-shadow: 0 5px 0 #a07800; cursor: pointer;
+    }
+    .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #a07800; }
+    .btn.alt { background: #fff; box-shadow: 0 5px 0 #888; }
+    .btn[disabled] { background: #999; box-shadow: 0 5px 0 #555; cursor: not-allowed; }
+    .msg { margin-top: 14px; padding: 10px; font-size: 14px; font-weight: bold; background: #000; display: none; }
+    .msg.on { display: block; }
+    .msg.err { background: #b00020; }
+    .code-box { margin: 14px 0; padding: 16px; background: #000; font-size: 28px; font-weight: bold; text-align: center; letter-spacing: 2px; word-break: break-all; }
+    .small { font-size: 12px; opacity: .85; margin-top: 14px; }
+    .step { display: none; }
+    .step.on { display: block; }
+    .stepno { font-size: 13px; font-weight: bold; opacity: .85; margin-bottom: 10px; }
+    .btnrow { display: flex; gap: 10px; }
+    .btnrow .btn { flex: 1; }
+    .row { display: flex; align-items: center; gap: 10px; background: #000; padding: 12px; margin-top: 12px; font-weight: bold; }
+    .row.off { opacity: .55; }
+    .row label { flex: 1; margin: 0; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+    .row input[type=checkbox] { width: 22px; height: 22px; }
+    .row input[type=number] { width: 96px; padding: 8px; font-size: 16px; border: 3px solid #000; background: #fff; color: #000; }
+    .req { padding: 10px; margin-top: 10px; font-size: 14px; font-weight: bold; background: #000; }
+    .req.ok::before { content: '✓ '; color: #4dff4d; }
+    .req.no::before { content: '✗ '; color: #ff6b6b; }
+    a { color: #ffcc00; }
+    .linkbtn { background: none; border: 0; color: #ffcc00; text-decoration: underline; font-size: 13px; cursor: pointer; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="card">
+    <h1>Код автора</h1>
+
+    <!-- 0. Загрузка -->
+    <div class="view on" id="v-loading"><p>Загрузка…</p></div>
+
+    <!-- 1. Не вошёл -->
+    <div class="view" id="v-signin">
+        <p>Войди в тот же аккаунт, что и в игре, чтобы создать код автора.</p>
+        <label for="si-email">Почта</label>
+        <input type="email" id="si-email" autocomplete="email">
+        <label for="si-pass">Пароль</label>
+        <input type="password" id="si-pass" autocomplete="current-password">
+        <div class="btn" id="si-btn">Войти</div>
+        <div class="btn alt" id="si-google">Войти через Google</div>
+    </div>
+
+    <!-- 2. Не нажимал «Создать код автора» в игре -->
+    <div class="view" id="v-norequest">
+        <p>Сначала открой игру, зайди в меню кода автора и нажми «СОЗДАТЬ КОД АВТОРА». Мы пришлём письмо со ссылкой на эту страницу.</p>
+        <div class="btn" onclick="location.href='index.html'">Открыть игру</div>
+    </div>
+
+    <!-- 3. Форма создания: 3 шага -->
+    <div class="view" id="v-form">
+
+        <div class="step on" id="s1">
+            <div class="stepno">Шаг 1 из 3 — Требования</div>
+            <ul>
+                <li>Получить в YouTube 100 тыс. подписчиков или получить в TikTok 500 подписчиков.</li>
+                <li>Быть участником хотя бы одной игры больше 8 недель.</li>
+            </ul>
+            <div class="req" id="age-line"></div>
+            <div class="req" id="yt-line" style="display:none"></div>
+            <label for="f-yt">Ссылка на канал YouTube</label>
+            <input type="url" id="f-yt" placeholder="https://youtube.com/@ник" autocomplete="off">
+            <label for="f-tt">Ссылка на аккаунт TikTok</label>
+            <input type="url" id="f-tt" placeholder="https://tiktok.com/@ник" autocomplete="off">
+            <p class="small">Достаточно одной ссылки. Подписчиков мы проверим вручную.</p>
+            <div class="btn" id="s1-next">Дальше</div>
+        </div>
+
+        <div class="step" id="s2">
+            <div class="stepno">Шаг 2 из 3 — Выбери свой код</div>
+            <label for="f-code">Только английские маленькие буквы, цифры и _ , без пробелов, 3–20 символов</label>
+            <input type="text" id="f-code" maxlength="20" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false">
+            <div class="btnrow">
+                <div class="btn alt" id="s2-back">Назад</div>
+                <div class="btn" id="s2-next">Дальше</div>
+            </div>
+        </div>
+
+        <div class="step" id="s3">
+            <div class="stepno">Шаг 3 из 3 — Награда за активацию</div>
+            <p>Отметь одну строку или обе и укажи количество.</p>
+            <div class="row off" id="row-coins">
+                <label><input type="checkbox" id="c-on"> 🪙 Монеты</label>
+                <input type="number" id="c-val" min="1" max="700" placeholder="до 700" disabled>
+            </div>
+            <div class="row off" id="row-gems">
+                <label><input type="checkbox" id="g-on"> 💎 Гемы</label>
+                <input type="number" id="g-val" min="1" max="80" placeholder="до 80" disabled>
+            </div>
+            <div class="small">Максимум: 700 монет и 80 гемов.</div>
+            <div class="btnrow">
+                <div class="btn alt" id="s3-back">Назад</div>
+                <div class="btn" id="f-btn">СОЗДАТЬ КОД АВТОРА</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Код уже есть -->
+    <div class="view" id="v-done">
+        <p id="d-text">Твой код автора:</p>
+        <div class="code-box" id="d-code"></div>
+        <p id="d-reward" style="margin-bottom:10px;font-weight:bold;"></p>
+        <p id="d-status"></p>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <button class="linkbtn" id="signout" style="display:none;">Выйти из аккаунта</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth-compat.js"></script>
+<script>
+    // Тот же Firebase-проект, что и в игре
+    const firebaseConfig = {
+        apiKey: "AIzaSyDgIHUyn20INLV70hxGEMlDy7GVEPcaDdc",
+        authDomain: "pico-9beb2.firebaseapp.com",
+        databaseURL: "https://pico-9beb2-default-rtdb.firebaseio.com",
+        projectId: "pico-9beb2",
+        storageBucket: "pico-9beb2.firebasestorage.app",
+        messagingSenderId: "122171952028",
+        appId: "1:122171952028:web:abd84d9bdf57213fb35659"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const CODE_RE = /^[a-z0-9_]{3,20}$/;
+    // Коды, которые уже зашиты в игре — их занимать нельзя
+    const RESERVED = ['developer', 'rypto', 'voco', 'byerealracing3', 'picotop', 'pico', 'admin'];
+
+    const $ = (id) => document.getElementById(id);
+    const views = ['v-loading', 'v-signin', 'v-norequest', 'v-form', 'v-done'];
+    function show(id) { views.forEach(v => $(v).classList.toggle('on', v === id)); }
+    function msg(text, isErr) {
+        const el = $('msg');
+        el.textContent = text || '';
+        el.className = 'msg' + (text ? ' on' : '') + (isErr ? ' err' : '');
+    }
+
+    // ---------- Вход ----------
+    $('si-btn').onclick = () => {
+        msg('');
+        const email = $('si-email').value.trim();
+        const pass = $('si-pass').value;
+        if (!email || !pass) { msg('Введи почту и пароль.', true); return; }
+        auth.signInWithEmailAndPassword(email, pass).catch(() => msg('Не удалось войти. Проверь почту и пароль.', true));
+    };
+    $('si-google').onclick = () => {
+        msg('');
+        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(() => msg('Вход через Google не удался.', true));
+    };
+    $('signout').onclick = () => auth.signOut();
+
+    // ---------- Что показать вошедшему ----------
+    async function route(user) {
+        show('v-loading');
+        try {
+            // 1) уже есть код?
+            const mine = await db.ref('author_by_uid/' + user.uid).once('value');
+            if (mine.exists()) {
+                const code = mine.val();
+                const info = (await db.ref('author_codes/' + code).once('value')).val() || {};
+                $('d-code').textContent = code;
+                const parts = [];
+                if (info.coins) parts.push(info.coins + ' монет');
+                if (info.gems) parts.push(info.gems + ' гемов');
+                $('d-reward').textContent = parts.length ? 'Награда за активацию: ' + parts.join(' и ') : '';
+                $('d-status').textContent = info.status === 'approved'
+                    ? 'Код одобрен — игроки уже могут его активировать.'
+                    : 'Код отправлен на проверку. Как только его одобрят, он заработает в игре.';
+                show('v-done');
+                return;
+            }
+            // 2) нажимал ли «Создать код автора» в игре?
+            const req = await db.ref('author_requests/' + user.uid).once('value');
+            if (req.exists()) initForm(user);
+            show(req.exists() ? 'v-form' : 'v-norequest');
+        } catch (e) {
+            console.warn(e);
+            msg('Нет доступа к базе данных. Проверь Firebase Rules.', true);
+            show('v-signin');
+        }
+    }
+
+    auth.onAuthStateChanged(user => {
+        $('signout').style.display = user ? 'inline-block' : 'none';
+        if (user) route(user); else show('v-signin');
+    });
+
+    // ---------- Шаги ----------
+    const MAX_COINS = 700, MAX_GEMS = 80, MIN_DAYS = 56;
+    let ageOk = false;
+
+    function goStep(n) {
+        msg('');
+        ['s1', 's2', 's3'].forEach((id, i) => $(id).classList.toggle('on', i === n - 1));
+    }
+
+    function initForm(user) {
+        goStep(1);
+        const created = new Date(user.metadata.creationTime).getTime();
+        const days = Math.floor((Date.now() - created) / 86400000);
+        ageOk = days >= MIN_DAYS;
+        const line = $('age-line');
+        line.className = 'req ' + (ageOk ? 'ok' : 'no');
+        line.textContent = ageOk
+            ? 'Ты в игре больше 8 недель'
+            : 'Ты в игре меньше 8 недель. Приходи через ' + (MIN_DAYS - days) + ' дн.';
+    }
+
+    // ТЕСТ: ключ YouTube прямо в странице. Потом удалить эту строку и ключ в Google Cloud Console.
+    const YT_API_KEY = 'AIzaSyAaLqTFTP5gbY774VL97LMh_tB99wgW1tQ';
+    const YT_MIN = 100000;
+    let ytSubs = null;
+
+    function parseYouTube(url) {
+        let u;
+        try { u = new URL(url); } catch (e) { return null; }
+        if (!/(^|\.)youtube\.com$/.test(u.hostname)) return null;
+        const p = u.pathname.split('/').filter(Boolean);
+        if (p[0] === 'channel' && p[1]) return { id: p[1] };
+        if (p[0] && p[0].charAt(0) === '@') return { handle: p[0] };
+        if (p[0] === 'user' && p[1]) return { username: p[1] };
+        return null;
+    }
+
+    async function getYouTubeSubs(url) {
+        const ref = parseYouTube(url);
+        if (!ref) throw new Error('Ссылка на YouTube: https://youtube.com/@ник или /channel/...');
+        const q = new URLSearchParams({ part: 'statistics', key: YT_API_KEY });
+        if (ref.id) q.set('id', ref.id);
+        else if (ref.handle) q.set('forHandle', ref.handle);
+        else q.set('forUsername', ref.username);
+        const r = await fetch('https://www.googleapis.com/youtube/v3/channels?' + q);
+        const j = await r.json();
+        if (!r.ok) throw new Error('YouTube не ответил (' + ((j.error && j.error.message) || r.status) + ')');
+        const c = j.items && j.items[0];
+        if (!c) throw new Error('Канал YouTube не найден.');
+        if (c.statistics.hiddenSubscriberCount) throw new Error('Число подписчиков скрыто. Открой его в настройках канала.');
+        return parseInt(c.statistics.subscriberCount || '0', 10);
+    }
+
+    // Шаг 1 → 2
+    $('s1-next').onclick = async () => {
+        msg('');
+        const yt = $('f-yt').value.trim(), tt = $('f-tt').value.trim();
+        const ytLine = $('yt-line');
+        ytLine.style.display = 'none';
+        ytSubs = null;
+        if (!ageOk) { msg('Ты ещё не в игре 8 недель.', true); return; }
+        if (!yt && !tt) { msg('Вставь хотя бы одну ссылку: YouTube или TikTok.', true); return; }
+        if (tt && !/^https:\/\/(www\.)?tiktok\.com\/@\S+$/i.test(tt)) { msg('Ссылка на TikTok: https://tiktok.com/@ник', true); return; }
+
+        let ytOk = false;
+        if (yt) {
+            msg('Проверяем YouTube…');
+            try {
+                ytSubs = await getYouTubeSubs(yt);
+            } catch (e) {
+                msg(e.message || 'Не удалось проверить YouTube.', true);
+                return;
+            }
+            msg('');
+            ytOk = ytSubs >= YT_MIN;
+            ytLine.className = 'req ' + (ytOk ? 'ok' : 'no');
+            ytLine.textContent = 'YouTube: ' + ytSubs.toLocaleString('ru-RU') + ' подписчиков' + (ytOk ? '' : ' (нужно 100 000)');
+            ytLine.style.display = 'block';
+        }
+        if (!ytOk && !tt) { msg('Не хватает подписчиков на YouTube. Добавь ссылку на TikTok или приходи позже.', true); return; }
+        goStep(2);
+    };
+
+    // Поле кода: только a-z, 0-9, _ ; без пробелов и переносов
+    $('f-code').addEventListener('input', e => {
+        e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    });
+    $('f-code').addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+
+    // Шаг 2 → 3
+    $('s2-back').onclick = () => goStep(1);
+    $('s2-next').onclick = async () => {
+        msg('');
+        const code = $('f-code').value;
+        if (!CODE_RE.test(code)) { msg('Код: от 3 до 20 символов, только a–z, 0–9 и _ .', true); return; }
+        if (RESERVED.includes(code)) { msg('Этот код занят. Выбери другой.', true); return; }
+        try {
+            const taken = await db.ref('author_codes/' + code).once('value');
+            if (taken.exists()) { msg('Этот код уже занят. Выбери другой.', true); return; }
+        } catch (e) { console.warn(e); msg('Не удалось проверить код. Попробуй ещё раз.', true); return; }
+        goStep(3);
+    };
+
+    // Награда: строки монеты / гемы
+    function bindRow(rowId, onId, valId, max) {
+        const on = $(onId), val = $(valId), row = $(rowId);
+        on.onchange = () => {
+            val.disabled = !on.checked;
+            row.classList.toggle('off', !on.checked);
+            if (!on.checked) val.value = '';
+        };
+        val.oninput = () => {
+            val.value = val.value.replace(/[^0-9]/g, '');
+            if (val.value !== '' && +val.value > max) val.value = max;
+        };
+    }
+    bindRow('row-coins', 'c-on', 'c-val', MAX_COINS);
+    bindRow('row-gems', 'g-on', 'g-val', MAX_GEMS);
+    $('s3-back').onclick = () => goStep(2);
+
+    // Шаг 3: создать код в базе
+    $('f-btn').onclick = async () => {
+        msg('');
+        const user = auth.currentUser;
+        if (!user) return;
+        const code = $('f-code').value;
+        const coins = $('c-on').checked ? parseInt($('c-val').value, 10) || 0 : 0;
+        const gems = $('g-on').checked ? parseInt($('g-val').value, 10) || 0 : 0;
+
+        if (!coins && !gems) { msg('Выбери награду: монеты или гемы (можно обе строки).', true); return; }
+        if (coins > MAX_COINS || gems > MAX_GEMS) { msg('Максимум: 700 монет и 80 гемов.', true); return; }
+
+        const btn = $('f-btn');
+        btn.setAttribute('disabled', '');
+        try {
+            const updates = {};
+            updates['author_codes/' + code] = {
+                uid: user.uid,
+                status: 'pending',
+                coins: coins,
+                gems: gems,
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            updates['author_by_uid/' + user.uid] = code;
+            updates['author_requests/' + user.uid + '/youtube'] = $('f-yt').value.trim() || null;
+            updates['author_requests/' + user.uid + '/tiktok'] = $('f-tt').value.trim() || null;
+            updates['author_requests/' + user.uid + '/ytSubs'] = ytSubs;
+            await db.ref().update(updates);
+            await route(user);
+        } catch (e) {
+            console.warn(e);
+            msg('Не получилось сохранить код. Возможно, он уже занят или у тебя уже есть код.', true);
+        } finally {
+            btn.removeAttribute('disabled');
+        }
+    };
+</script>
+</body>
+</html>
